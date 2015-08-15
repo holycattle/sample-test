@@ -1,0 +1,6 @@
+.vagrant/
+data/
+Vagrantfile
+custom.yml
+hosts
+

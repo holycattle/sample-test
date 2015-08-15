@@ -1,0 +1,30 @@
+- name: Add repository for ruby 2.2
+  apt_repository: repo=ppa:brightbox/ruby-ng
+  sudo: yes
+- name: Upgrade packages
+  apt: update_cache=yes upgrade=yes
+  sudo: yes
+
+- name: Install ruby
+  apt: pkg={{item}}
+  with_items:
+  - ruby2.2
+  - ruby2.2-dev
+  sudo: yes
+- name: Make symlink to ruby2.2
+  file: path=/usr/bin/ruby src=/usr/bin/ruby2.2 state=link
+  sudo: yes
+- name: Make symlink to gem2.2
+  file: path=/usr/bin/gem src=/usr/bin/gem2.2 state=link
+  sudo: yes
+- name: gem update
+  gem: name=system
+  sudo: yes
+
+- name: export Path
+  lineinfile: >-
+    dest=~/.profile 
+    line='export PATH="$HOME/.gem/ruby/2.2.0/bin:$PATH"'
+    regexp=".gem/ruby/2.2.0/bin"
+  sudo: no
+

@@ -1,0 +1,23 @@
+- hosts: servers
+  user: "{{ lookup('env','OS_USER_NAME') }}"
+  sudo: no
+  roles:
+    - system
+    - php
+    - ruby
+    - node
+    - java
+    - scala
+    - python3
+    - clang
+    - gcc
+    - go
+    - gpp
+    - groovy
+    - haskell
+    - ocaml
+    - perl
+    - git
+
+#    - mysql
+#    - postgresql

@@ -1,0 +1,13 @@
+- name: Add repository for git
+  apt_repository: repo=ppa:git-core/ppa
+  sudo: yes
+- name: Upgrade packages
+  apt: update_cache=yes upgrade=yes
+  sudo: yes
+- name: Install git
+  apt: name=git
+  sudo: yes
+- name: copy private key
+  copy: src={{private_key_path}} dest=~/.ssh/id_rsa owner={{os_user_name}} group={{os_user_name}} mode=0600    
+  sudo: no
+
