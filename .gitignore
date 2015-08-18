@@ -2,3 +2,4 @@ node_modules/
 *.sw[a-z]
 .DS_Store
 data/
+.vagrant
