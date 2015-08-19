@@ -14,7 +14,7 @@ libraryDependencies ++= Seq(
 
 libraryDependencies += "com.typesafe.play" %% "play-slick" % "1.0.1"
 libraryDependencies += "com.h2database" % "h2" % "1.3.176" // replace `${H2_VERSION}` with an actual version number
-libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.18"
+libraryDependencies += "mysql" % "mysql-connector-java" % "5.1.25"
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 
