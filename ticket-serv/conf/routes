@@ -7,7 +7,7 @@ GET     /api                        controllers.Application.index
 
 #Login
 GET     /api/login                  controllers.Login.get
-POST    /api/login                  controllers.Login.post
+POST    /api/login                  controllers.Login.login
 
 
 # Map static resources from the /public folder to the /assets URL path

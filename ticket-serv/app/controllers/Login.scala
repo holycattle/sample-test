@@ -1,7 +1,10 @@
 package controllers
 
+import javax.inject.Inject
+
 import play.api.Play
 import play.api.mvc._
+import play.api.libs.Codecs.sha1
 
 import play.api.libs.json.Json
 import play.api.libs.json.JsNull
@@ -13,33 +16,73 @@ import play.api.data.validation.Constraints._
 import play.api.db.slick._
 import slick.driver.JdbcProfile
 
+import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import models._
 
-class Login extends MyController with UserTable with HasDatabaseConfig[JdbcProfile] {
+class Login @Inject() (users: Users) extends MyController with UserTable with HasDatabaseConfig[JdbcProfile] {
   import driver.api._
 
-  case class User(email: String, password: String)
+  case class UserAuth(email: String, password: String)
 
-  val users = TableQuery[Users]
-
-  val userForm: Form[User] = Form(
+  /*
+  val userSignupForm: Form[User] = Form(
     mapping(
+      "name" -> nonEmptyText,
       "email" -> nonEmptyText,
       "password" -> nonEmptyText
     )(User.apply)(User.unapply)
+  )*/
+
+  val userLoginForm: Form[UserAuth] = Form(
+    mapping(
+      "email" -> nonEmptyText,
+      "password" -> nonEmptyText
+    )(UserAuth.apply)(UserAuth.unapply)
   )
 
   def get = Action.async { implicit request =>
-    db.run(users.result).map { r =>
+    users.all().map { r =>
       Ok(Json.toJson(r))
     }
   }
 
-  def post = Action { implicit request =>
+  def login = Action.async { implicit request =>
+    userLoginForm.bindFromRequest().fold(
+      formWithErrors => Future {
+        InternalServerError(
+          Json.obj("response" -> "Invalid login.")
+        )
+      },
+
+      user => {
+        val deferredUser = for {
+          u <- users.getByEmailAndPassword(user.email, sha1(user.password))
+        } yield u
+        
+        /*users.getByEmailAndPassword(user.email, user.password) onComplete {
+          case Success(posts) => for 
+        }*/
+
+        deferredUser.map { case u =>
+          u match {
+            case Some(x) => {
+              println(u)
+              Ok(Json.toJson(u))
+            }
+            case None =>
+              InternalServerError("No user found!")
+          }
+        }
+      }
+    )
+  }
+
+  /*
+  def signup = Action { implicit request =>
     //form constraints
-    userForm.bindFromRequest().fold(
+    userSignupForm.bindFromRequest().fold(
       formWithErrors => Status(500)(
         Json.obj("response" -> "Registration failed.")
       ).as("application/json"),
@@ -56,5 +99,5 @@ class Login extends MyController with UserTable with HasDatabaseConfig[JdbcProfi
         )  
       ).as("application/json")
     )
-  }
+  }*/
 }

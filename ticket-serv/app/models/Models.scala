@@ -43,10 +43,10 @@ class Users @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider:
   }
 
   def getByEmailAndPassword(email: String, password: String): Future[Option[User]] = {
-    val query = for {
+    /*val query = for {
       u <- users if u.email === email && u.password === password
-    } yield u
-    db.run(users.filter(_.email === email).result.headOption)
-    //db.run(query)
+    } yield u*/
+    db.run(users.filter(_.email === email).filter(_.password === password).result.headOption)
+    //db.run(query.result)
   }
 }
