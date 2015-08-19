@@ -13,6 +13,8 @@ libraryDependencies ++= Seq(
   specs2 % Test
 )
 
+libraryDependencies += "com.typesafe.play" %% "play-slick" % "1.0.1"
+
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 
 // Play provides two styles of routers, one expects its actions to be injected, the
