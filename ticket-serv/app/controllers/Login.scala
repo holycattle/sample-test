@@ -1,6 +1,6 @@
 package controllers
 
-import play.api._
+import play.api.Play
 import play.api.mvc._
 
 import play.api.libs.json.Json
@@ -10,8 +10,19 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 
-class Login extends Controller {
+import play.api.db.slick._
+import slick.driver.JdbcProfile
+
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import models._
+
+class Login extends MyController with UserTable with HasDatabaseConfig[JdbcProfile] {
+  import driver.api._
+
   case class User(email: String, password: String)
+
+  val users = TableQuery[Users]
 
   val userForm: Form[User] = Form(
     mapping(
@@ -20,22 +31,10 @@ class Login extends Controller {
     )(User.apply)(User.unapply)
   )
 
-  def get = Action {
-    var x = Json.obj(
-      "users" -> Json.arr(
-        Json.obj(
-          "name" -> "bob",
-          "age" -> 31,
-          "email" -> "bob@gmail.com"  	  
-        ),
-        Json.obj(
-          "name" -> "kiki",
-          "age" -> 25,
-          "email" -> JsNull  	  
-        )
-      )
-    )
-    Ok(x).as("application/json")
+  def get = Action.async { implicit request =>
+    db.run(users.result).map { r =>
+      Ok(Json.toJson(r))
+    }
   }
 
   def post = Action { implicit request =>
