@@ -5,6 +5,14 @@ import play.api.mvc._
 import play.api.libs.json.Json
 import play.api.libs.json.JsNull
 
+import play.api.db.slick._
+import slick.driver.JdbcProfile
+import play.api.db.slick.HasDatabaseConfig
+
+abstract class MyController extends Controller {
+  protected val dbConfig = DatabaseConfigProvider.get[JdbcProfile]("vagrant")(Play.current)
+}
+
 class Application extends Controller {
 
   //sample json
