@@ -60,19 +60,14 @@ class Login @Inject() (users: Users) extends MyController with UserTable with Ha
         val deferredUser = for {
           u <- users.getByEmailAndPassword(user.email, sha1(user.password))
         } yield u
-        
-        /*users.getByEmailAndPassword(user.email, user.password) onComplete {
-          case Success(posts) => for 
-        }*/
 
         deferredUser.map { case u =>
           u match {
             case Some(x) => {
-              println(u)
-              Ok(Json.toJson(u))
+              Ok(Json.toJson(users.authenticateSession(x))).as("application/json")
             }
             case None =>
-              InternalServerError("No user found!")
+              Status(500)
           }
         }
       }

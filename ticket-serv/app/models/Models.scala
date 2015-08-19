@@ -4,13 +4,16 @@ import javax.inject.{Singleton, Inject}
 import scala.concurrent.Future
 
 import play.api._
+import play.api.libs.json._
 import play.api.libs.json.Json
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsValue
 
 import play.db.NamedDatabase
 import play.api.db.slick._
 import slick.driver.JdbcProfile
 
-case class User(id: Long, name: String, password: String, email: String, groupId: Int)
+case class User(id: Long, name: String, password: String, email: String, group_id: Int)
 
 object User {
   implicit val userFormat = Json.format[User]
@@ -25,9 +28,9 @@ trait UserTable {
     def name = column[String]("name", O.PrimaryKey)
     def password = column[String]("password")
     def email = column[String]("email")
-    def groupId = column[Int]("group_id")
+    def group_id = column[Int]("group_id")
 
-    def * = (id, name, password, email, groupId) <> ((User.apply _).tupled, User.unapply _)
+    def * = (id, name, password, email, group_id) <> ((User.apply _).tupled, User.unapply _)
   }
 }
 
@@ -49,4 +52,22 @@ class Users @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider:
     db.run(users.filter(_.email === email).filter(_.password === password).result.headOption)
     //db.run(query.result)
   }
+
+  def authenticateSession(user: User): JsObject = {
+    //HACK -- there has to be a better way to do this ;_;
+    val u = Json.toJson(user).transform((__ \ 'password).json.prune)
+    println(Json.obj(
+      "code" -> 0,
+      "token" -> "code",
+      "user" -> u.get
+      )
+    )
+
+    Json.obj(
+      "code" -> 0,
+      "token" -> "code",
+      "user" -> u.get
+    )
+  }
+
 }
