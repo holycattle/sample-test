@@ -21,7 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import models._
 
-class Login @Inject() (users: Users) extends MyController with UserTable with HasDatabaseConfig[JdbcProfile] {
+class Login @Inject() (users: Users) extends MyController with HasDatabaseConfig[JdbcProfile] {
   import driver.api._
 
   case class UserAuth(email: String, password: String)
@@ -59,7 +59,7 @@ class Login @Inject() (users: Users) extends MyController with UserTable with Ha
             }
             case None =>
               //InternalServerError(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
-              Ok(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
+              Ok(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR )).as("application/json")
           }
         }
       }
