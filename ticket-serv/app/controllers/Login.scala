@@ -4,7 +4,6 @@ import javax.inject.Inject
 
 import play.api.Play
 import play.api.mvc._
-import play.api.libs.Codecs.sha1
 
 import play.api.libs.json.Json
 import play.api.libs.json.JsNull
@@ -21,7 +20,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import models._
 
-class Login @Inject() (users: Users) extends MyController with HasDatabaseConfig[JdbcProfile] {
+import org.sedis.Pool
+
+class Login @Inject() (users: Users, sedisPool: Pool) extends MyController with HasDatabaseConfig[JdbcProfile] {
   import driver.api._
 
   case class UserAuth(email: String, password: String)
@@ -49,7 +50,7 @@ class Login @Inject() (users: Users) extends MyController with HasDatabaseConfig
 
       user => {
         val deferredUser = for {
-          u <- users.getByEmailAndPassword(user.email, sha1(user.password))
+          u <- users.getByEmailAndPassword(user.email, user.password)
         } yield u
 
         deferredUser.map { case u =>

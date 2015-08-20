@@ -22,6 +22,12 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.slick.jdbc
 import com.github.tototoshi.slick.MySQLJodaSupport._
 
+import play.api.cache.Cache
+
+import org.sedis.Pool
+
+import play.api.libs.Codecs.sha1
+
 /*
 User model
 */
@@ -49,7 +55,9 @@ trait UserTable {
 @Singleton()
 //oops there's a magic string here;
 //TODO: refactor 'vagrant' to a config thing
-class Users @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider: DatabaseConfigProvider) extends UserTable with HasDatabaseConfig[JdbcProfile] {
+class Users @Inject()
+(@NamedDatabase("vagrant") protected val dbConfigProvider: DatabaseConfigProvider, sedisPool: Pool)
+extends UserTable with HasDatabaseConfig[JdbcProfile] {
   val dbConfig = dbConfigProvider.get[JdbcProfile]  
   import driver.api._
 
@@ -59,22 +67,48 @@ class Users @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider:
     db.run(users.result)
   }
 
-  def getByEmailAndPassword(email: String, password: String): Future[Option[User]] = {
-    /*val query = for {
-      u <- users if u.email === email && u.password === password
-    } yield u*/
-    db.run(users.filter(_.email === email).filter(_.password === password).result.headOption)
-    //db.run(query.result)
+  def getByEmailAndPassword(email: String, password: String): Future[Option[User]] = {    
+    db.run(users.filter(_.email === email).filter(_.password === sha1(password)).result.headOption)
   }
 
   def authenticateSession(user: User): JsObject = {
-    //HACK -- there has to be a better way to do this ;_;
-    val u = Json.toJson(user).transform((__ \ 'password).json.prune)
-    Json.obj(
-      "code" -> play.mvc.Http.Status.OK,
-      "token" -> "code",
-      "user" -> u.get
-    )
+    //TODO: figure out how to integrate the plugin with Play's Cache
+    //import play.api.Play.current
+    //Cache.set("key", "val")
+    //println(Cache.getAs[String]("key"))
+
+    //just for prototyping purposes, obviously LOL
+    //expires after 25 minutes
+    def generateToken(e: String): String = {
+      val SECRET = "PCJ!)#B7" + System.currentTimeMillis.toString
+      sha1(SECRET + e)
+    }
+
+    def jsonifyUser(token: String) = {
+      //HACK -- there has to be a better way to do this ;_;
+      val u = Json.toJson(user).transform((__ \ 'password).json.prune)
+      Json.obj(
+        "code" -> play.mvc.Http.Status.OK,
+        "token" -> token,
+        "user" -> u.get
+      )
+    }
+
+    val key = user.email+"__password"
+    sedisPool.withClient(client => {
+      val currentPassword = client.get(key)
+      currentPassword match {
+        case None => {
+          val token = generateToken(user.email)
+          client.set(key, token)
+          client.expire(key, 1500)
+          jsonifyUser(token)
+        }
+        case Some(token) => {
+          jsonifyUser(token)
+        }
+      }
+    })
   }
 }
 
