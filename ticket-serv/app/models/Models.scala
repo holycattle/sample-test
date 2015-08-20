@@ -16,6 +16,8 @@ import slick.driver.JdbcProfile
 import org.joda.time.DateTime
 import java.sql.Timestamp
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext 
+
 /*
 User model
 */
@@ -75,7 +77,7 @@ class Users @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider:
 /*
 Event model
 */
-case class Event(id: Long, user_id: Int, name: String, start_date: Timestamp)
+case class Event(id: Long, user_id: Long, name: String, start_date: Timestamp)
 
 trait EventTable {
   protected val driver: JdbcProfile
@@ -83,19 +85,10 @@ trait EventTable {
   
   class EventModel(tag: Tag) extends Table[Event](tag, "events") {
     def id = column[Long]("id", O.PrimaryKey)
-    def user_id = column[Int]("user_id")
+    def user_id = column[Long]("user_id")
     def name = column[String]("name")
     def start_date = column[Timestamp]("start_date")
-
-    /*implicit object EventWrites extends Writes[Event] {
-      def writes(u: Event) = Json.obj(
-        "id" -> JsNumber(u.id),
-        "user_id" -> JsNumber(u.user_id),
-        "name" -> JsString(u.name),
-        "start_date" -> JsString(u.start_date.toString)
-      )
-    }*/
-
+    
     def * = (id, user_id, name, start_date) <> (Event.tupled, Event.unapply _)
   }
 }
@@ -114,12 +107,12 @@ class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider
   }
 
   def getByGroup(g: Int): Future[Seq[Event]] = {
-    /*val query = for {
-      u <- users if u.group_id === g,
+    val query = for {
+      u <- users if u.group_id === g
       l <- events if l.user_id === u.id
-    } yield u*/
+    } yield l
     
-    db.run(events.result)
+    db.run(query.result).map(rows => rows.map { r => r })
   }
 }
 
