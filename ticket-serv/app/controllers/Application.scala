@@ -59,7 +59,7 @@ class Application @Inject() (users: Users, events: Events) extends MyController 
 
   implicit object SeqEventWrites extends Writes[Seq[Event]] {
     def writes(u: Seq[Event]) = {
-      val acc: JsArray = u.foldLeft(Json.arr()) {
+      u.foldLeft(Json.arr()) {
         (acc, i) => {
           acc :+ Json.obj(
             "id" -> JsNumber(i.id),
@@ -69,7 +69,6 @@ class Application @Inject() (users: Users, events: Events) extends MyController 
           )
         }
       }
-      acc
     }
   }
 
