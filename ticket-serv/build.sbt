@@ -23,7 +23,10 @@ libraryDependencies ++= Seq(
     "com.github.tototoshi" %% "slick-joda-mapper" % "2.0.0"
 )
 
+libraryDependencies += "com.typesafe.play.modules" %% "play-modules-redis" % "2.4.0"
+
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
+resolvers += "google-sedis-fix" at "http://pk11-scratch.googlecode.com/svn/trunk"
 
 // Play provides two styles of routers, one expects its actions to be injected, the
 // other, legacy style, accesses its actions statically.
