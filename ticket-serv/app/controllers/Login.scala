@@ -26,15 +26,6 @@ class Login @Inject() (users: Users) extends MyController with UserTable with Ha
 
   case class UserAuth(email: String, password: String)
 
-  /*
-  val userSignupForm: Form[User] = Form(
-    mapping(
-      "name" -> nonEmptyText,
-      "email" -> nonEmptyText,
-      "password" -> nonEmptyText
-    )(User.apply)(User.unapply)
-  )*/
-
   val userLoginForm: Form[UserAuth] = Form(
     mapping(
       "email" -> nonEmptyText,
@@ -50,10 +41,10 @@ class Login @Inject() (users: Users) extends MyController with UserTable with Ha
 
   def login = Action.async { implicit request =>
     userLoginForm.bindFromRequest().fold(
+      //had to make formWithErrors async beause this Action is async
       formWithErrors => Future {
-        InternalServerError(
-          Json.obj("response" -> "Invalid login.")
-        )
+        //InternalServerError(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
+        Ok(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
       },
 
       user => {
@@ -67,32 +58,11 @@ class Login @Inject() (users: Users) extends MyController with UserTable with Ha
               Ok(Json.toJson(users.authenticateSession(x))).as("application/json")
             }
             case None =>
-              InternalServerError(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
+              //InternalServerError(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
+              Ok(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
           }
         }
       }
     )
   }
-
-  /*
-  def signup = Action { implicit request =>
-    //form constraints
-    userSignupForm.bindFromRequest().fold(
-      formWithErrors => Status(500)(
-        Json.obj("response" -> "Registration failed.")
-      ).as("application/json"),
-      
-      user => Ok(
-        Json.obj(
-          "code" -> 0,
-          "token" -> "hello_world",
-          "user" -> Json.obj(
-            "id" -> 0,
-            "name" -> user.email,
-            "group_id" -> 1
-          )
-        )  
-      ).as("application/json")
-    )
-  }*/
 }
