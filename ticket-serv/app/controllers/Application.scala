@@ -5,7 +5,7 @@ import play.api.mvc._
 import play.api.libs.json.Json
 
 import play.api.libs.json._
-import play.api.libs.json.{JsNull, JsString, JsNumber, Json}
+import play.api.libs.json.{JsNull, JsString, JsNumber, Json, JsArray}
 import play.api.libs.functional.syntax._
 
 import javax.inject.Inject
@@ -34,14 +34,14 @@ abstract class MyController extends Controller {
 class Application @Inject() (users: Users, events: Events) extends MyController with HasDatabaseConfig[JdbcProfile] {
   import driver.api._
 
-  case class UserEvent(from: DateTime, offset: Option[Int], limit: Option[Int])
+  case class UserEvent(from: Option[DateTime], offset: Option[Int], limit: Option[Int])
 
   val GroupStudent = 1
   val GroupCompany = 2
 
   val userEventForm: Form[UserEvent] = Form(
     mapping(
-      "from" -> jodaDate("yyyy-MM-dd"),
+      "from" -> optional(jodaDate("yyyy-MM-dd")),
       "offset" -> optional(number(min = 0)),
       "limit" -> optional(number(min = 1))
     )(UserEvent.apply)(UserEvent.unapply)
@@ -58,7 +58,19 @@ class Application @Inject() (users: Users, events: Events) extends MyController 
   }
 
   implicit object SeqEventWrites extends Writes[Seq[Event]] {
-    def writes(u: Seq[Event]) = Json.toJson(u)
+    def writes(u: Seq[Event]) = {
+      val acc: JsArray = u.foldLeft(Json.arr()) {
+        (acc, i) => {
+          acc :+ Json.obj(
+            "id" -> JsNumber(i.id),
+            "user_id" -> JsNumber(i.user_id),
+            "name" -> JsString(i.name),
+            "start_date" -> JsString(i.start_date.toString)
+          )
+        }
+      }
+      acc
+    }
   }
 
   def getStudentEvents = Action.async { implicit request =>
