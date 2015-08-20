@@ -31,7 +31,7 @@ abstract class MyController extends Controller {
   protected val dbConfig = DatabaseConfigProvider.get[JdbcProfile]("vagrant")(Play.current)
 }
 
-class Application @Inject() (users: Users, events: Events) extends MyController with HasDatabaseConfig[JdbcProfile] {
+class Application @Inject() (users: Users, events: Events, attends: Attends) extends MyController with HasDatabaseConfig[JdbcProfile] {
   import driver.api._
 
   implicit object EventWrites extends Writes[Event] {
@@ -122,17 +122,24 @@ class Application @Inject() (users: Users, events: Events) extends MyController 
     )(Reservation.apply)(Reservation.unapply)
   )
 
-  /*def reserveEvent = Action.async { implicit request =>
+  def reserveEvent = Action.async { implicit request =>
     reservationForm.bindFromRequest().fold(
       formWithErrors => Future {
-        Ok( Json.obj( "code" -> 401 ) )
+        Ok( Json.obj( "code" -> 500 ) )
       },
 
       reservation => {
         val deferredRes = for {
-          
+          r <- attends.reserveEvent(reservation.token, reservation.event_id)
+        } yield r
+
+        deferredRes.map { case i =>
+          i match {
+            case Some(x) => Ok(Json.obj("code" -> 200)) //successfully added
+            case None => Ok(Json.obj("code" -> 401)) //unsuccessful
+          }
         }
       }
     )
-  }*/
+  }
 }

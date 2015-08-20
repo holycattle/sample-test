@@ -115,7 +115,7 @@ trait EventTable {
   import driver.api._
   
   class EventModel(tag: Tag) extends Table[Event](tag, "events") {
-    def id = column[Long]("id", O.PrimaryKey)
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def user_id = column[Long]("user_id")
     def name = column[String]("name")
     def start_date = column[DateTime]("start_date")
@@ -183,34 +183,60 @@ trait AttendsTable {
   class AttendsModel(tag: Tag) extends Table[Attendance](tag, "attends") {
     def user_id = column[Int]("user_id")
     def event_id = column[Int]("event_id")
-    def reserved_at = column[DateTime]("reserved_at")
+    def reserved_at = column[DateTime]("reserved_at", O.Default(DateTime.now))
     
     def * = (user_id, event_id, reserved_at) <> (Attendance.tupled, Attendance.unapply _)
   }
 }
 
 //TODO: refactor all the extends to a super class for all my Tables
-/*@Singleton()
-class Attends @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider: DatabaseConfigProvider)
+@Singleton()
+class Attends @Inject()
+(@NamedDatabase("vagrant") protected val dbConfigProvider: DatabaseConfigProvider, sedisPool: Pool)
 extends EventTable with UserTable with AttendsTable with HasDatabaseConfig[JdbcProfile] {
 
-  def reserveEvent(token: String, eventId: Int, reservedAt: DateTime) {
+  val dbConfig = dbConfigProvider.get[JdbcProfile]  
+  import driver.api._
+
+  val events = TableQuery[EventModel]
+  val users = TableQuery[UserModel]
+  val attends = TableQuery[AttendsModel]
+
+  def reserveEvent(token: String, eventId: Int): Future[Option[Int]] = {
+    //preemptively build the query outside just for readability
+    def getUserEmailQuery(email: String) = users.filter(_.email === email).result.headOption
+
     //get user based on token
-    val key = user.email+"__password"
     sedisPool.withClient(client => {
-      val currentPassword = client.get(key)
-      currentPassword match {
+      val currentUserEmail = client.get(token)
+      currentUserEmail match {
         case None => {
-          val token = generateToken(user.email)
-          client.set(key, token)
-          client.expire(key, 1500)
-          jsonifyUser(token)
+          //return null; or maybe an error code?
+          Future {None}
         }
-        case Some(token) => {
-          jsonifyUser(token)
+        case Some(email) => {
+          //get user based on email
+          val deferredUser = for {
+            u <- db.run(getUserEmailQuery(email))
+          } yield u
+
+          deferredUser.map { case u =>
+            u match {
+              case Some(x) => {
+                //check if student
+                if (x.group_id == 1) {
+                  //add an entry to the Events table using user.id and eventId
+                  db.run(attends += Attendance(x.id.toInt, eventId, DateTime.now))
+                  None //HACK
+                } else {
+                  None
+                }
+              }
+              case None => None
+            }
+          }
         }
       }
     })
   }
-
-}*/
+}
