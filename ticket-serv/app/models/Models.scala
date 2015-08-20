@@ -18,6 +18,9 @@ import java.sql.Timestamp
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext 
 
+import scala.slick.jdbc
+import com.github.tototoshi.slick.MySQLJodaSupport._
+
 /*
 User model
 */
@@ -114,5 +117,9 @@ class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider
     
     db.run(query.result).map(rows => rows.map { r => r })
   }
+
+  /*def getPresentAndFutureEvents(dateString: String): Future[Seq[Event]] = {
+    val ts: Timestamp = Timestamp.valueOf(dateString)
+  }*/
 }
 
