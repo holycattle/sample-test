@@ -120,16 +120,29 @@ class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider
     db.run(query.result).map(rows => rows.map { r => r })
   }
 
-  def getPresentAndFutureEvents(dateString: String): Future[Seq[(Event, User)]] = {
+  def getPresentAndFutureEvents(dateString: String, offset: Option[Int], limit: Option[Int]): Future[Seq[(Event, User)]] = {
     val dateTime = DateTime.parse(dateString, DateTimeFormat.forPattern("yyyy-MM-dd"))
 
     //TODO: make a convenience function for resolving this kind of query
     val query = for {
-      e <- events if e.start_date <= dateTime
+      e <- events if e.start_date >= dateTime
       u <- users if u.id === e.user_id
     } yield (e, u)
 
-    db.run(query.result).map(rows => rows)
+    //check if there's an offset
+    val o = offset match {
+      case Some(x) => x
+      case None => 0
+    }
+
+    println(o)
+
+    //check if there's a limit
+    //I guess I could nest matches, but that would be a pain to read lol
+    limit match {
+      case Some(x) => db.run(query.drop(o).take(x).result).map(rows => rows)
+      case None => db.run(query.drop(o).result).map(rows => rows)
+    }
   }
 }
 

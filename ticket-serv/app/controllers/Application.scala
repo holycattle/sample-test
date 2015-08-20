@@ -73,6 +73,29 @@ class Application @Inject() (users: Users, events: Events) extends MyController 
     }
   }
 
+  implicit object SeqEventUserWrites extends Writes[Seq[(Event, User)]] {
+    def writes(eu: Seq[(Event, User)]) = {
+      val arr = eu.foldLeft(Json.arr()) {
+        (acc, i) => {
+          acc :+ Json.obj(
+            //there might be a better way to do this?
+            "id" -> JsNumber(i._1.id),
+            "user_id" -> JsNumber(i._1.user_id),
+            "name" -> JsString(i._1.name),
+            "start_date" -> JsString(i._1.start_date.toString),
+            "user" -> Json.obj(
+              "id" -> JsNumber(i._2.id),
+              "name" -> JsString(i._2.name)
+            )
+          )
+        }
+      }
+
+      Json.obj( "code" -> JsNumber(200), "events" -> arr )
+    }
+  }
+
+
   def getStudentEvents = Action.async { implicit request =>
     userEventForm.bindFromRequest().fold(
       formWithErrors => Future {
@@ -81,10 +104,12 @@ class Application @Inject() (users: Users, events: Events) extends MyController 
 
       eventForm => {
         val deferredEvent = for {
-          e <- events.all()
+          e <- events.getPresentAndFutureEvents(eventForm.from, eventForm.offset, eventForm.limit)
         } yield e
         
-        deferredEvent.map( e => Ok(Json.toJson(e.map(e => e))).as("application/json") )
+        deferredEvent.map(
+          e => Ok(Json.toJson(e)).as("application/json")
+        )
       }
     )
   }
