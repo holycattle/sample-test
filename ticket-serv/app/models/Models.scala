@@ -135,13 +135,12 @@ class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider
       case None => 0
     }
 
-    println(o)
-
     //check if there's a limit
     //I guess I could nest matches, but that would be a pain to read lol
     limit match {
-      case Some(x) => db.run(query.drop(o).take(x).result).map(rows => rows)
-      case None => db.run(query.drop(o).result).map(rows => rows)
+      case Some(x) => db.run(query.drop(o).take(x)
+        .sortBy(_._1.start_date.asc).result).map(rows => rows)
+      case None => db.run(query.drop(o).sortBy(_._1.start_date.asc).result).map(rows => rows)
     }
   }
 }
