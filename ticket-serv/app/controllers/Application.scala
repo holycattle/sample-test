@@ -34,20 +34,6 @@ abstract class MyController extends Controller {
 class Application @Inject() (users: Users, events: Events) extends MyController with HasDatabaseConfig[JdbcProfile] {
   import driver.api._
 
-  case class UserEvent(from: String, offset: Option[Int], limit: Option[Int])
-
-  val GroupStudent = 1
-  val GroupCompany = 2
-
-  val userEventForm: Form[UserEvent] = Form(
-    mapping(
-      //"from" -> jodaDate("yyyy-MM-dd"),
-      "from" -> nonEmptyText,
-      "offset" -> optional(number(min = 0)),
-      "limit" -> optional(number(min = 1))
-    )(UserEvent.apply)(UserEvent.unapply)
-  )
-
   implicit object EventWrites extends Writes[Event] {
     def writes(u: Event) = 
       Json.obj(
@@ -95,6 +81,19 @@ class Application @Inject() (users: Users, events: Events) extends MyController 
     }
   }
 
+  case class UserEvent(from: String, offset: Option[Int], limit: Option[Int])
+
+  val GroupStudent = 1
+  val GroupCompany = 2
+
+  val userEventForm: Form[UserEvent] = Form(
+    mapping(
+      //"from" -> jodaDate("yyyy-MM-dd"),
+      "from" -> nonEmptyText,
+      "offset" -> optional(number(min = 0)),
+      "limit" -> optional(number(min = 1))
+    )(UserEvent.apply)(UserEvent.unapply)
+  )
 
   def getStudentEvents = Action.async { implicit request =>
     userEventForm.bindFromRequest().fold(
@@ -113,4 +112,27 @@ class Application @Inject() (users: Users, events: Events) extends MyController 
       }
     )
   }
+
+  case class Reservation(token: String, event_id: Int, reservation: Boolean)
+  val reservationForm: Form[Reservation] = Form(
+    mapping(
+      "token" -> nonEmptyText,
+      "event_id" -> number,
+      "reservation" -> boolean
+    )(Reservation.apply)(Reservation.unapply)
+  )
+
+  /*def reserveEvent = Action.async { implicit request =>
+    reservationForm.bindFromRequest().fold(
+      formWithErrors => Future {
+        Ok( Json.obj( "code" -> 401 ) )
+      },
+
+      reservation => {
+        val deferredRes = for {
+          
+        }
+      }
+    )
+  }*/
 }

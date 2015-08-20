@@ -90,24 +90,16 @@ extends UserTable with HasDatabaseConfig[JdbcProfile] {
       Json.obj(
         "code" -> play.mvc.Http.Status.OK,
         "token" -> token,
-        "user" -> u.get
+        "user" -> u.get //since we're sure it exists; usually bad practice though
       )
     }
 
-    val key = user.email+"__password"
+    //simply refresh token if user tries to login again
     sedisPool.withClient(client => {
-      val currentPassword = client.get(key)
-      currentPassword match {
-        case None => {
-          val token = generateToken(user.email)
-          client.set(key, token)
-          client.expire(key, 1500)
-          jsonifyUser(token)
-        }
-        case Some(token) => {
-          jsonifyUser(token)
-        }
-      }
+      val token = generateToken(user.email)
+      client.set(token, user.email)
+      client.expire(token, 1500)
+      jsonifyUser(token)
     })
   }
 }
@@ -179,3 +171,46 @@ class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider
   }
 }
 
+/*
+Attends model
+*/
+case class Attendance(user_id: Int, event_id: Int, reserved_at: DateTime)
+
+trait AttendsTable {
+  protected val driver: JdbcProfile
+  import driver.api._
+  
+  class AttendsModel(tag: Tag) extends Table[Attendance](tag, "attends") {
+    def user_id = column[Int]("user_id")
+    def event_id = column[Int]("event_id")
+    def reserved_at = column[DateTime]("reserved_at")
+    
+    def * = (user_id, event_id, reserved_at) <> (Attendance.tupled, Attendance.unapply _)
+  }
+}
+
+//TODO: refactor all the extends to a super class for all my Tables
+/*@Singleton()
+class Attends @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider: DatabaseConfigProvider)
+extends EventTable with UserTable with AttendsTable with HasDatabaseConfig[JdbcProfile] {
+
+  def reserveEvent(token: String, eventId: Int, reservedAt: DateTime) {
+    //get user based on token
+    val key = user.email+"__password"
+    sedisPool.withClient(client => {
+      val currentPassword = client.get(key)
+      currentPassword match {
+        case None => {
+          val token = generateToken(user.email)
+          client.set(key, token)
+          client.expire(key, 1500)
+          jsonifyUser(token)
+        }
+        case Some(token) => {
+          jsonifyUser(token)
+        }
+      }
+    })
+  }
+
+}*/

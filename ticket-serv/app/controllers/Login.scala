@@ -26,7 +26,6 @@ class Login @Inject() (users: Users, sedisPool: Pool) extends MyController with 
   import driver.api._
 
   case class UserAuth(email: String, password: String)
-
   val userLoginForm: Form[UserAuth] = Form(
     mapping(
       "email" -> nonEmptyText,
@@ -40,6 +39,7 @@ class Login @Inject() (users: Users, sedisPool: Pool) extends MyController with 
     }
   }
 
+  //uses Redis; refer to Models.scala
   def login = Action.async { implicit request =>
     userLoginForm.bindFromRequest().fold(
       //had to make formWithErrors async beause this Action is async
