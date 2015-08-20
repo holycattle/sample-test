@@ -34,14 +34,15 @@ abstract class MyController extends Controller {
 class Application @Inject() (users: Users, events: Events) extends MyController with HasDatabaseConfig[JdbcProfile] {
   import driver.api._
 
-  case class UserEvent(from: Option[DateTime], offset: Option[Int], limit: Option[Int])
+  case class UserEvent(from: String, offset: Option[Int], limit: Option[Int])
 
   val GroupStudent = 1
   val GroupCompany = 2
 
   val userEventForm: Form[UserEvent] = Form(
     mapping(
-      "from" -> optional(jodaDate("yyyy-MM-dd")),
+      //"from" -> jodaDate("yyyy-MM-dd"),
+      "from" -> nonEmptyText,
       "offset" -> optional(number(min = 0)),
       "limit" -> optional(number(min = 1))
     )(UserEvent.apply)(UserEvent.unapply)
@@ -75,13 +76,12 @@ class Application @Inject() (users: Users, events: Events) extends MyController 
   def getStudentEvents = Action.async { implicit request =>
     userEventForm.bindFromRequest().fold(
       formWithErrors => Future {
-        //Ok(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
-        Ok(formWithErrors.toString)
+        BadRequest(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
       },
 
       eventForm => {
         val deferredEvent = for {
-          e <- events.getByGroup(GroupCompany)
+          e <- events.all()
         } yield e
         
         deferredEvent.map( e => Ok(Json.toJson(e.map(e => e))).as("application/json") )
