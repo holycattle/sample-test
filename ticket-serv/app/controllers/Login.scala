@@ -67,7 +67,7 @@ class Login @Inject() (users: Users) extends MyController with UserTable with Ha
               Ok(Json.toJson(users.authenticateSession(x))).as("application/json")
             }
             case None =>
-              Status(500)
+              InternalServerError(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
           }
         }
       }

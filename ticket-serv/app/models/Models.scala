@@ -57,14 +57,14 @@ class Users @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider:
     //HACK -- there has to be a better way to do this ;_;
     val u = Json.toJson(user).transform((__ \ 'password).json.prune)
     println(Json.obj(
-      "code" -> 0,
+      "code" -> play.mvc.Http.Status.OK,
       "token" -> "code",
       "user" -> u.get
       )
     )
 
     Json.obj(
-      "code" -> 0,
+      "code" -> play.mvc.Http.Status.OK,
       "token" -> "code",
       "user" -> u.get
     )
