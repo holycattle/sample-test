@@ -14,6 +14,7 @@ import play.api.db.slick._
 import slick.driver.JdbcProfile
 
 import org.joda.time.DateTime
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import java.sql.Timestamp
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext 
@@ -80,7 +81,8 @@ class Users @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider:
 /*
 Event model
 */
-case class Event(id: Long, user_id: Long, name: String, start_date: Timestamp)
+//TODO: wrap in Option()
+case class Event(id: Long, user_id: Long, name: String, start_date: DateTime)
 
 trait EventTable {
   protected val driver: JdbcProfile
@@ -90,7 +92,7 @@ trait EventTable {
     def id = column[Long]("id", O.PrimaryKey)
     def user_id = column[Long]("user_id")
     def name = column[String]("name")
-    def start_date = column[Timestamp]("start_date")
+    def start_date = column[DateTime]("start_date")
     
     def * = (id, user_id, name, start_date) <> (Event.tupled, Event.unapply _)
   }
@@ -118,8 +120,16 @@ class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider
     db.run(query.result).map(rows => rows.map { r => r })
   }
 
-  /*def getPresentAndFutureEvents(dateString: String): Future[Seq[Event]] = {
-    val ts: Timestamp = Timestamp.valueOf(dateString)
-  }*/
+  def getPresentAndFutureEvents(dateString: String): Future[Seq[(Event, User)]] = {
+    val dateTime = DateTime.parse(dateString, DateTimeFormat.forPattern("yyyy-MM-dd"))
+
+    //TODO: make a convenience function for resolving this kind of query
+    val query = for {
+      e <- events if e.start_date <= dateTime
+      u <- users if u.id === e.user_id
+    } yield (e, u)
+
+    db.run(query.result).map(rows => rows)
+  }
 }
 
