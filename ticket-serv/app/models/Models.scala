@@ -101,7 +101,9 @@ extends UserTable with HasDatabaseConfig[JdbcProfile] {
     sedisPool.withClient(client => {
       val token = generateToken(user.email)
       client.set(token, user.email)
+      client.set(user.email+"__group_id", user.group_id.toString)
       client.expire(token, 1500)
+      client.expire(user.email+"__group_id", 1500)
       jsonifyUser(token)
     })
   }

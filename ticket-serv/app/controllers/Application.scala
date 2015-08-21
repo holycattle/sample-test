@@ -218,8 +218,15 @@ extends MyController with HasDatabaseConfig[JdbcProfile] {
                 u <- events.getCompanyEvents(eventForm.from, eventForm.offset, eventForm.limit)
               } yield u
 
+              val optionGroupId = client.get(email+"__group_id")
               deferredRes.map(
-                e => Ok(Json.toJson(e)).as("application/json")
+                e => {
+                  val respInvalid = Json.obj("code" -> 401,
+                      "message" -> "Invalid token." )
+                  if (optionGroupId.isEmpty) Ok(respInvalid).as("application/json")
+                  else if (optionGroupId.get.toInt == 2) Ok(Json.toJson(e)).as("application/json")
+                  else Ok(respInvalid).as("application/json")
+                }
               )
             }
           }
