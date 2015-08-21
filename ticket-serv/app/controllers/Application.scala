@@ -147,8 +147,12 @@ class Application @Inject() (users: Users, events: Events, attends: Attends, sed
 
               deferredRes.map { case u =>
                 u match {
-                  case 0 =>
+                  case 0 => //normal error; already reserved
                     Ok( Json.obj( "code" -> 401, "message" -> "Error" ) ).as("application/json")
+                  case -1 => //error in deleting a reservation
+                    Ok( Json.obj( "code" -> 502, "message" -> "Error" ) ).as("application/json")
+                  case -2 => //attendance already exists
+                    Ok( Json.obj( "code" -> 501, "message" -> "Error" ) ).as("application/json")
                   case _ =>
                     Ok( Json.obj( "code" -> 200 ) ).as("application/json")
                 }

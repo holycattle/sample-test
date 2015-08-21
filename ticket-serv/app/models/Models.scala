@@ -211,7 +211,6 @@ extends EventTable with UserTable with AttendsTable with HasDatabaseConfig[JdbcP
     val repLong: Rep[Long] = eventId
     val repInt: Rep[Int] = eventId.toInt
     val q = for {
-      e <- events if e.id != repLong
       u <- users if u.email === email && u.group_id === 1
     } yield u
     val res: Future[Option[User]] = db.run(q.result.headOption)
@@ -221,18 +220,21 @@ extends EventTable with UserTable with AttendsTable with HasDatabaseConfig[JdbcP
       e <- events if e.id === repLong && e.user_id === u.id
     } yield e
 
-    println(reserved)
-
     res.map { case u =>
       u match {
         case Some(y) => {
-          //TODO: REFACTOR THIS ABOMINATION LATER
-          if (reserved) {
-            Await.result(db.run(attends += Attendance(y.id.toInt, eventId.toInt, DateTime.now)), 1 seconds)
-          }
-          else {
-            Await.result(db.run(attends.filter(_.event_id === repInt).delete), 1 seconds)
-            1
+          //TODO: REFACTOR THIS ABOMINATION LATER; it's as blocky (i.e. not async) as shit
+          val exists = Await.result(db.run(attends.filter(_.user_id===y.id.toInt)
+            .filter(_.event_id===eventId.toInt).exists.result), 1 seconds)
+          println(exists)
+          if (reserved && !exists) {
+            Await.result(db.run(attends += Attendance(y.id.toInt, eventId.toInt, DateTime.now)), 1 seconds) //successfully inserted; returns non negative number
+          } else if (!reserved) {
+            //TODO: this is a terrible hack; will fix later
+            val x = Await.result(db.run(attends.filter(_.event_id === repInt).delete), 1 seconds)
+            if (x < 1) -1 else 1 //returns -1 if nothing was deleted
+          } else {
+            -2 //exists already; don't insert
           }
         }
         case None => 0
