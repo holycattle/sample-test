@@ -21,6 +21,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 
 import org.joda.time.DateTime
+import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.sedis.Pool
 
 import models._
@@ -164,3 +165,69 @@ class Application @Inject() (users: Users, events: Events, attends: Attends, sed
     )
   }
 }
+
+class Companies @Inject() (users: Users, events: Events, attends: Attends, sedisPool: Pool)
+extends MyController with HasDatabaseConfig[JdbcProfile] {
+  import driver.api._
+
+  case class CompanyEvent(token: String, from: String, offset: Option[Int], limit: Option[Int])
+
+  val companyEventForm: Form[CompanyEvent] = Form(
+    mapping(
+      "token" -> nonEmptyText,
+      "from" -> nonEmptyText,
+      "offset" -> optional(number(min = 0)),
+      "limit" -> optional(number(min = 1))
+    )(CompanyEvent.apply)(CompanyEvent.unapply)
+  )
+
+  implicit object SeqEventUserWrites extends Writes[Seq[(Long, String, String, Int)]] {
+    def writes(eu: Seq[(Long, String, String, Int)]) = {
+      val arr = eu.foldLeft(Json.arr()) {
+        (acc, i) => {
+          acc :+ Json.obj(
+            //there might be a better way to do this?
+            "id" -> JsNumber(i._1),
+            "name" -> JsString(i._2),
+            "start_date" -> JsString(i._3),
+            "number_of_attendees" -> JsNumber(i._4)
+          )
+        }
+      }
+
+      Json.obj( "code" -> JsNumber(200), "events" -> arr )
+    }
+  }
+  
+  def getCompanyEvents = Action.async { implicit request =>
+    companyEventForm.bindFromRequest().fold(
+      formWithErrors => Future {
+        BadRequest(Json.obj( "code" -> play.mvc.Http.Status.INTERNAL_SERVER_ERROR ))
+      },
+
+      eventForm => {
+        sedisPool.withClient(client => {
+          val currentUserEmail = client.get(eventForm.token)
+          currentUserEmail match {
+            case None => Future { //not logged in
+              Ok( Json.obj(
+                "code" -> 401, "message" -> "Invalid token." ) ).as("application/json")
+            }
+            case Some(email) => { //logged in
+              val deferredRes = for {
+                u <- events.getCompanyEvents(eventForm.from, eventForm.offset, eventForm.limit)
+              } yield u
+
+              deferredRes.map(
+                e => Ok(Json.toJson(e)).as("application/json")
+              )
+            }
+          }
+        })
+      }
+    )
+  }
+}
+
+
+

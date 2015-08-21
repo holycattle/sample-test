@@ -129,24 +129,17 @@ trait EventTable {
 
 //TODO: use generics to reduce boilerplate and repetition T_T
 @Singleton()
-class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider: DatabaseConfigProvider) extends EventTable with UserTable with HasDatabaseConfig[JdbcProfile] {
+class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider: DatabaseConfigProvider) extends EventTable with UserTable with AttendsTable
+with HasDatabaseConfig[JdbcProfile] {
   val dbConfig = dbConfigProvider.get[JdbcProfile]  
   import driver.api._
 
   val events = TableQuery[EventModel]
   val users = TableQuery[UserModel]
+  val attends = TableQuery[AttendsModel]
 
   def all(): Future[Seq[User]] = {
     db.run(users.result)
-  }
-
-  def getByGroup(g: Int): Future[Seq[Event]] = {
-    val query = for {
-      u <- users if u.group_id === g
-      l <- events if l.user_id === u.id
-    } yield l
-    
-    db.run(query.result).map(rows => rows.map { r => r })
   }
 
   def getPresentAndFutureEvents(dateString: String, offset: Option[Int], limit: Option[Int]): Future[Seq[(Event, User)]] = {
@@ -171,6 +164,17 @@ class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider
         .sortBy(_._1.start_date.asc).result).map(rows => rows)
       case None => db.run(query.drop(o).sortBy(_._1.start_date.asc).result).map(rows => rows)
     }
+  }
+
+  def getCompanyEvents(dateString: String, offset: Option[Int],
+  limit: Option[Int]): Future[Seq[(Long, String, String, Int)]] = {
+    val rawSQL = sql"""
+                  SELECT e.id, e.name, e.start_date, count(a.user_id)
+                  as number_of_attendees FROM events e
+                  left outer join attends a
+                  ON e.id = a.event_id GROUP BY e.id;""".as[(Long, String, String, Int)]
+
+    db.run(rawSQL)
   }
 }
 
@@ -207,10 +211,13 @@ extends EventTable with UserTable with AttendsTable with HasDatabaseConfig[JdbcP
 
   def reserve(email: String, eventId: Long, reserved: Boolean): Future[Int] = {
     //get user based on email and group_id
-    //TODO: get rid of magic numbers! evil, evil magic numbers
+    
     val repLong: Rep[Long] = eventId
     val repInt: Rep[Int] = eventId.toInt
+    
+    //get user role
     val q = for {
+      //TODO: get rid of magic numbers! evil, evil magic numbers
       u <- users if u.email === email && u.group_id === 1
     } yield u
     val res: Future[Option[User]] = db.run(q.result.headOption)

@@ -7,7 +7,7 @@ organizing stuff into inheritable and/or generic classes. Maybe even write DSPs?
 3. Setup Slick Evolutions for version tracking the database; setup Slick code generation for tables
 4. Reduce boilerplate when handling Futures. (It could be that I'm still new to Scala and therefore not aware of shortcuts and more idiomatic approaches yet, but I feel that I'm writing too much boilerplate stuff.)
 5. Write support for Joda Dates (dates sure are a pain to work with lol). [EDIT: Found a plugin that works well with Slick. Hurrah!]
-6. Add role-based authentication using decorators or something. I did my auth manually by querying
+6. Add role-based authentication per route using decorators or something. I did my auth manually by querying
 the database.
 7. Make querying easier, e.g. convenience functions for handling join queries done with list
 comprehensions (`for {}`).
@@ -21,6 +21,6 @@ adds more complexity/dirty work in the code for checking if an entry exists
 12. Setup a database migration workflow for any schema changes (related to #3).
 13. I think I put too much of the logic in Models.scala; perhaps I can refactor some of those into
 the controllers instead.
-14. Break Models.scala into smaller files for easier readability.
+14. Break Models.scala and Application.scala into smaller files for easier readability.
 15. Some table data types in the schema aren't consistent; some of the primary keys are Long while
-the pseudo-foreign keys are Int.
+the pseudo-foreign keys are Int (related to #11).
