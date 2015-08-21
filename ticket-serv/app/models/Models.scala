@@ -2,6 +2,9 @@ package models
 
 import javax.inject.{Singleton, Inject}
 import scala.concurrent.Future
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.util.{Success, Failure}
 
 import play.api._
 import play.api.libs.json._
@@ -202,41 +205,38 @@ extends EventTable with UserTable with AttendsTable with HasDatabaseConfig[JdbcP
   val users = TableQuery[UserModel]
   val attends = TableQuery[AttendsModel]
 
-  def reserveEvent(token: String, eventId: Int): Future[Option[Int]] = {
-    //preemptively build the query outside just for readability
-    def getUserEmailQuery(email: String) = users.filter(_.email === email).result.headOption
+  def reserve(email: String, eventId: Long, reserved: Boolean): Future[Int] = {
+    //get user based on email and group_id
+    //TODO: get rid of magic numbers! evil, evil magic numbers
+    val repLong: Rep[Long] = eventId
+    val repInt: Rep[Int] = eventId.toInt
+    val q = for {
+      e <- events if e.id != repLong
+      u <- users if u.email === email && u.group_id === 1
+    } yield u
+    val res: Future[Option[User]] = db.run(q.result.headOption)
 
-    //get user based on token
-    sedisPool.withClient(client => {
-      val currentUserEmail = client.get(token)
-      currentUserEmail match {
-        case None => {
-          //return null; or maybe an error code?
-          Future {None}
-        }
-        case Some(email) => {
-          //get user based on email
-          val deferredUser = for {
-            u <- db.run(getUserEmailQuery(email))
-          } yield u
+    val queryExistingEvent = for {
+      u <- users if u.email === email
+      e <- events if e.id === repLong && e.user_id === u.id
+    } yield e
 
-          deferredUser.map { case u =>
-            u match {
-              case Some(x) => {
-                //check if student
-                if (x.group_id == 1) {
-                  //add an entry to the Events table using user.id and eventId
-                  db.run(attends += Attendance(x.id.toInt, eventId, DateTime.now))
-                  None //HACK
-                } else {
-                  None
-                }
-              }
-              case None => None
-            }
+    println(reserved)
+
+    res.map { case u =>
+      u match {
+        case Some(y) => {
+          //TODO: REFACTOR THIS ABOMINATION LATER
+          if (reserved) {
+            Await.result(db.run(attends += Attendance(y.id.toInt, eventId.toInt, DateTime.now)), 1 seconds)
+          }
+          else {
+            Await.result(db.run(attends.filter(_.event_id === repInt).delete), 1 seconds)
+            1
           }
         }
+        case None => 0
       }
-    })
+    }
   }
 }

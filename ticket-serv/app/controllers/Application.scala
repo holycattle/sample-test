@@ -21,17 +21,21 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 
 import org.joda.time.DateTime
+import org.sedis.Pool
 
 import models._
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+import scala.concurrent._
+import scala.concurrent.duration._
+
 abstract class MyController extends Controller {
   protected val dbConfig = DatabaseConfigProvider.get[JdbcProfile]("vagrant")(Play.current)
 }
 
-class Application @Inject() (users: Users, events: Events, attends: Attends) extends MyController with HasDatabaseConfig[JdbcProfile] {
+class Application @Inject() (users: Users, events: Events, attends: Attends, sedisPool: Pool) extends MyController with HasDatabaseConfig[JdbcProfile] {
   import driver.api._
 
   implicit object EventWrites extends Writes[Event] {
@@ -113,32 +117,38 @@ class Application @Inject() (users: Users, events: Events, attends: Attends) ext
     )
   }
 
-  case class Reservation(token: String, event_id: Int, reservation: Boolean)
+  case class Reservation(token: String, event_id: Int, reserve: Boolean)
   val reservationForm: Form[Reservation] = Form(
     mapping(
       "token" -> nonEmptyText,
       "event_id" -> number,
-      "reservation" -> boolean
+      "reserve" -> boolean
     )(Reservation.apply)(Reservation.unapply)
   )
 
   def reserveEvent = Action.async { implicit request =>
     reservationForm.bindFromRequest().fold(
-      formWithErrors => Future {
-        Ok( Json.obj( "code" -> 500 ) )
-      },
+      formWithErrors => Future { Ok( Json.obj( "code" -> 500 ) ) },
 
       reservation => {
-        val deferredRes = for {
-          r <- attends.reserveEvent(reservation.token, reservation.event_id)
-        } yield r
+        sedisPool.withClient(client => {
+          val currentUserEmail = client.get(reservation.token)
+          currentUserEmail match {
+            case None => Future { Ok( Json.obj( "code" -> 500 ) ) }
+            case Some(email) => {
+              val deferredRes = for {
+                u <- attends.reserve(email.toString, reservation.event_id, reservation.reserve)
+              } yield u
 
-        deferredRes.map { case i =>
-          i match {
-            case Some(x) => Ok(Json.obj("code" -> 200)) //successfully added
-            case None => Ok(Json.obj("code" -> 401)) //unsuccessful
+              deferredRes.map { case u =>
+                u match {
+                  case 0 => Ok( Json.obj( "code" -> 501 ) ).as("application/json")
+                  case _ => Ok( Json.obj( "code" -> 200 ) ).as("application/json")
+                }
+              }
+            }
           }
-        }
+        })
       }
     )
   }
