@@ -181,16 +181,58 @@ with HasDatabaseConfig[JdbcProfile] {
     sedisPool.withClient(client => {
       //TODO: use matching; for testing purposes, it's probably not needed
       val id = client.get(email+"__user_id")
-      val rawSQL = sql"""
-                  SELECT e.id, e.name, e.start_date, count(a.user_id)
-                  as number_of_attendees FROM events e
-                  left outer join attends a
-                  ON e.id = a.event_id
-                  WHERE e.start_date >= ${dateString} and
-                  e.user_id = ${id}
-                  GROUP BY e.id;""".as[(Long, String, String, Int)]
 
-      db.run(rawSQL)
+      //DIRTY HACK
+      if (!limit.isEmpty && offset.isEmpty) {
+        val noOffsetSQL =
+          sql"""
+            SELECT e.id, e.name, e.start_date, count(a.user_id)
+            as number_of_attendees FROM events e
+            left outer join attends a
+            ON e.id = a.event_id
+            WHERE e.start_date >= ${dateString} and
+            e.user_id = ${id}
+            GROUP BY e.id;""".as[(Long, String, String, Int)]
+
+        db.run(noOffsetSQL)
+      } else if (!limit.isEmpty && !offset.isEmpty) {
+        val limitOffsetSQL =
+          sql"""
+          SELECT e.id, e.name, e.start_date, count(a.user_id)
+          as number_of_attendees FROM events e
+          left outer join attends a
+          ON e.id = a.event_id
+          WHERE e.start_date >= ${dateString} and
+          e.user_id = ${id}
+          GROUP BY e.id
+          LIMIT ${limit.get} OFFSET ${offset.get};""".as[(Long, String, String, Int)]
+
+        db.run(limitOffsetSQL)
+      } else if (limit.isEmpty && !offset.isEmpty) {
+          val defaultLimitSQL =
+            sql"""
+              SELECT e.id, e.name, e.start_date, count(a.user_id)
+              as number_of_attendees FROM events e
+              left outer join attends a
+              ON e.id = a.event_id
+              WHERE e.start_date >= ${dateString} and
+              e.user_id = ${id}
+              GROUP BY e.id
+              LIMIT 100 OFFSET ${offset.get};""".as[(Long, String, String, Int)]
+
+        db.run(defaultLimitSQL) //arbitrary limit
+      } else {
+        val defaultSQL =
+          sql"""
+            SELECT e.id, e.name, e.start_date, count(a.user_id)
+            as number_of_attendees FROM events e
+            left outer join attends a
+            ON e.id = a.event_id
+            WHERE e.start_date >= ${dateString} and
+            e.user_id = ${id}
+            GROUP BY e.id;""".as[(Long, String, String, Int)]
+        db.run(defaultSQL)
+      }
     })
 
     //check if there's a limit
