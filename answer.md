@@ -17,10 +17,11 @@ comprehensions (`for {}`).
 use Await.result() because I didn't know how to flatten some things. ;_; I'm obviously going to have
 to refactor those.]
 11. Modify the database schema to use foreign keys; not using foreign keys is prone to errors (and
-adds more complexity/dirty work in the code for checking if an entry exists
+adds more complexity/dirty work in the code for checking if an entry exists. Some table data types
+in the schema also aren't consistent -- some of the primary keys are Long while the pseudo-foreign
+keys are Int.
 12. Setup a database migration workflow for any schema changes (related to #3).
 13. I think I put too much of the logic in Models.scala; perhaps I can refactor some of those into
 the controllers instead.
 14. Break Models.scala and Application.scala into smaller files for easier readability.
-15. Some table data types in the schema aren't consistent; some of the primary keys are Long while
-the pseudo-foreign keys are Int (related to #11).
+15. Fix all the dirty hacks I did to save time and finish as soon as possible. T_T
