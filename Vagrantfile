@@ -13,11 +13,12 @@ Vagrant.configure(2) do |config|
     override.vm.box = "ubuntu1404"
     override.vm.hostname = "scala-test"
     override.vm.network "private_network", ip: "192.168.33.101"
-    override.vm.synced_folder "data", "/home/vagrant/data", :nfs => true
+    #override.vm.synced_folder "data", "/home/vagrant/data", :nfs => true
     override.vm.synced_folder ".", "/home/vagrant/scala-test", :nfs => true
     override.vm.synced_folder ".", "/var/www/scala-test", :nfs => true
   
-    override.vm.network :forwarded_port, guest: 8080, host: 8080 #API/backend
+    #just in case I want to deploy later on, without relying on the test server
+    #override.vm.network :forwarded_port, guest: 8080, host: 8080 #API/backend
     override.ssh.forward_x11 = true
 
     override.vm.provider :virtualbox do |vb|
@@ -32,7 +33,7 @@ Vagrant.configure(2) do |config|
     end
 
     #HACK -- I accidentally deleted my .vagrant folder and shit blew up
-    override.ssh.private_key_path = "~/.ssh/id_rsa"
+    #override.ssh.private_key_path = "~/.ssh/id_rsa"
     override.ssh.forward_agent = true
   end
 end
