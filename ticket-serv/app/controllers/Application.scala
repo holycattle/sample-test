@@ -215,7 +215,7 @@ extends MyController with HasDatabaseConfig[JdbcProfile] {
             }
             case Some(email) => { //logged in
               val deferredRes = for {
-                u <- events.getCompanyEvents(eventForm.from, eventForm.offset, eventForm.limit)
+                u <- events.getCompanyEvents(email, eventForm.from, eventForm.offset, eventForm.limit)
               } yield u
 
               val optionGroupId = client.get(email+"__group_id")

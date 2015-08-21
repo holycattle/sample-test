@@ -102,8 +102,10 @@ extends UserTable with HasDatabaseConfig[JdbcProfile] {
       val token = generateToken(user.email)
       client.set(token, user.email)
       client.set(user.email+"__group_id", user.group_id.toString)
+      client.set(user.email+"__user_id", user.id.toString)
       client.expire(token, 1500)
       client.expire(user.email+"__group_id", 1500)
+      client.expire(user.email+"__user_id", 1500)
       jsonifyUser(token)
     })
   }
@@ -131,7 +133,7 @@ trait EventTable {
 
 //TODO: use generics to reduce boilerplate and repetition T_T
 @Singleton()
-class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider: DatabaseConfigProvider) extends EventTable with UserTable with AttendsTable
+class Events @Inject() (@NamedDatabase("vagrant") protected val dbConfigProvider: DatabaseConfigProvider, sedisPool: Pool) extends EventTable with UserTable with AttendsTable
 with HasDatabaseConfig[JdbcProfile] {
   val dbConfig = dbConfigProvider.get[JdbcProfile]  
   import driver.api._
@@ -168,15 +170,44 @@ with HasDatabaseConfig[JdbcProfile] {
     }
   }
 
-  def getCompanyEvents(dateString: String, offset: Option[Int],
+  def getCompanyEvents(email: String, dateString: String, offset: Option[Int],
   limit: Option[Int]): Future[Seq[(Long, String, String, Int)]] = {
-    val rawSQL = sql"""
+    //check if there's an offset
+    /*val o = offset match {
+      case Some(x) => x
+      case None => 0
+    }*/
+
+    sedisPool.withClient(client => {
+      //TODO: use matching; for testing purposes, it's probably not needed
+      val id = client.get(email+"__user_id")
+      val rawSQL = sql"""
                   SELECT e.id, e.name, e.start_date, count(a.user_id)
                   as number_of_attendees FROM events e
                   left outer join attends a
-                  ON e.id = a.event_id GROUP BY e.id;""".as[(Long, String, String, Int)]
+                  ON e.id = a.event_id
+                  WHERE e.start_date >= ${dateString} and
+                  e.user_id = ${id}
+                  GROUP BY e.id;""".as[(Long, String, String, Int)]
 
-    db.run(rawSQL)
+      db.run(rawSQL)
+    })
+
+    //check if there's a limit
+    /*limit match {
+      case Some(x) => {
+        val rawSQL = sql"""
+              SELECT e.id, e.name, e.start_date, count(a.user_id)
+              as number_of_attendees FROM events e
+              left outer join attends a
+              ON e.id = a.event_id WHERE e.start_date >= ${dateString} GROUP BY e.id;""".as[(Long, String, String, Int)]
+
+        db.run(dateQuery.drop(o).take(x)
+        .sortBy(_._1.start_date.asc).result).map(rows => rows)
+      }
+      case None => db.run(dateQuery.drop(o).sortBy(_._1.start_date.asc).result).map(
+        rows => rows)
+    }*/ 
   }
 }
 
