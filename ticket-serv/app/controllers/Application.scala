@@ -128,13 +128,18 @@ class Application @Inject() (users: Users, events: Events, attends: Attends, sed
 
   def reserveEvent = Action.async { implicit request =>
     reservationForm.bindFromRequest().fold(
-      formWithErrors => Future { Ok( Json.obj( "code" -> 500 ) ) },
+      formWithErrors => Future {
+        Ok( Json.obj( "code" -> 401, "message" -> "Invalid params." ) ).as("application/json")
+      },
 
       reservation => {
         sedisPool.withClient(client => {
           val currentUserEmail = client.get(reservation.token)
           currentUserEmail match {
-            case None => Future { Ok( Json.obj( "code" -> 500 ) ) }
+            case None => Future {
+              Ok( Json.obj(
+                "code" -> 401, "message" -> "Invalid token." ) ).as("application/json")
+            }
             case Some(email) => {
               val deferredRes = for {
                 u <- attends.reserve(email.toString, reservation.event_id, reservation.reserve)
@@ -142,8 +147,10 @@ class Application @Inject() (users: Users, events: Events, attends: Attends, sed
 
               deferredRes.map { case u =>
                 u match {
-                  case 0 => Ok( Json.obj( "code" -> 501 ) ).as("application/json")
-                  case _ => Ok( Json.obj( "code" -> 200 ) ).as("application/json")
+                  case 0 =>
+                    Ok( Json.obj( "code" -> 401, "message" -> "Error" ) ).as("application/json")
+                  case _ =>
+                    Ok( Json.obj( "code" -> 200 ) ).as("application/json")
                 }
               }
             }
