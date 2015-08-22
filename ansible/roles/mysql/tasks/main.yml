@@ -10,11 +10,11 @@
   notify: restart mysql
   sudo: yes
 - name: create mysql db
-  mysql_db: name={{os_user_name}} state=present
+  mysql_db: name={{user}} state=present
   sudo: yes
 - name: create mysql user
-  mysql_user: name={{os_user_name}} password={{os_user_name}} priv={{os_user_name}}.*:ALL state=present
+  mysql_user: name={{user}} password={{user}} priv={{user}}.*:ALL state=present
   sudo: yes
 - name: create mysql user {{os_user_name}}@%
-  mysql_user: name={{os_user_name}} host=% password={{os_user_name}} priv={{os_user_name}}.*:ALL state=present
+  mysql_user: name={{user}} host=% password={{user}} priv={{user}}.*:ALL state=present
   sudo: yes
