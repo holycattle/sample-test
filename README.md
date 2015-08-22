@@ -17,6 +17,18 @@ This is a prototype for it.
   - These specs are written with [api-first-spec](https://github.com/shunjikonishi/api-first-spec), and has some API tests.
 - Your goal is to develop a web application which be able to pass all these tests.
 
+## Installation
+After running `vagrant up` from the root directory of the project, do the following:
+```bash
+vagrant provision
+vagrant ssh
+mysql -uvagrant -pvagrant -Dvagrant < scala-test/sql/create.sql
+cd scala-test
+npm install
+cd ticket-serv
+activator
+```
+
 ## How to solve the test
 This test requires
 
@@ -30,33 +42,13 @@ And then, develop an application by yourself.
 Database structure and sample data are written in [sql/create.sql](sql/create.sql).  
 Build your own mysql server and run this script.
 
-If you want to build it automatically, you can use our [test env builder](https://github.com/code-check/env-builder)
-
-You can set up an environment with following commands.
-
-``` bash
-git clone git@github.com:code-check/env-builder.git test-env
-cd test-env
-cp Vagrantfile.sample Vagrantfile
-cp hosts.sample hosts
-vagrant up
-ansible-playbook all.yml
-vagrant ssh
-git clone git@github.com:[YOUR GITHUB ACCOUNT]/sample-test.git
-mysql -uvagrant -pvagrant -Dvagrant < sample-test/sql/create.sql
-
-cd sample-test
-```
-
-And then, implement the app and push to your REPO.
-
 ## How to run the api-first-spec test
 api-first-spec uses [Mocha](http://mochajs.org/) test framework.
 
 You can run all tests with following commands.
 
 ``` bash
-cd sample-test
+cd scala-test
 npm install
 mocha spec/*
 ```
