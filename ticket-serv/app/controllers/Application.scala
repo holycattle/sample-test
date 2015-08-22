@@ -133,6 +133,7 @@ class Application @Inject() (users: Users, events: Events, attends: Attends, sed
         Ok( Json.obj( "code" -> 401, "message" -> "Invalid params." ) ).as("application/json")
       },
 
+      //form handlers can be turned into curried functions too ;_;
       reservation => {
         sedisPool.withClient(client => {
           val currentUserEmail = client.get(reservation.token)
