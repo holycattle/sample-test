@@ -20,6 +20,7 @@ This is a prototype for it.
 ## Installation
 After running `vagrant up` from the root directory of the project, do the following:
 ```bash
+vagrant provision
 vagrant ssh
 mysql -uvagrant -pvagrant -Dvagrant < scala-test/sql/create.sql
 cd scala-test
