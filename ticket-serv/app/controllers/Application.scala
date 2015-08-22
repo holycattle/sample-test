@@ -206,6 +206,7 @@ extends MyController with HasDatabaseConfig[JdbcProfile] {
       },
 
       eventForm => {
+        //TODO: turns this into a method that can be curried
         sedisPool.withClient(client => {
           val currentUserEmail = client.get(eventForm.token)
           currentUserEmail match {
@@ -235,6 +236,3 @@ extends MyController with HasDatabaseConfig[JdbcProfile] {
     )
   }
 }
-
-
-

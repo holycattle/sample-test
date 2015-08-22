@@ -78,7 +78,6 @@ extends UserTable with HasDatabaseConfig[JdbcProfile] {
     //TODO: figure out how to integrate the plugin with Play's Cache
     //import play.api.Play.current
     //Cache.set("key", "val")
-    //println(Cache.getAs[String]("key"))
 
     //just for prototyping purposes, obviously LOL
     //expires after 25 minutes
@@ -98,6 +97,7 @@ extends UserTable with HasDatabaseConfig[JdbcProfile] {
     }
 
     //simply refresh token if user tries to login again
+    //TODO: turns this into a method that can be curried
     sedisPool.withClient(client => {
       val token = generateToken(user.email)
       client.set(token, user.email)
@@ -162,7 +162,6 @@ with HasDatabaseConfig[JdbcProfile] {
     }
 
     //check if there's a limit
-    //I guess I could nest matches, but that would be a pain to read lol
     limit match {
       case Some(x) => db.run(query.drop(o).take(x)
         .sortBy(_._1.start_date.asc).result).map(rows => rows)
@@ -172,12 +171,8 @@ with HasDatabaseConfig[JdbcProfile] {
 
   def getCompanyEvents(email: String, dateString: String, offset: Option[Int],
   limit: Option[Int]): Future[Seq[(Long, String, String, Int)]] = {
-    //check if there's an offset
-    /*val o = offset match {
-      case Some(x) => x
-      case None => 0
-    }*/
 
+    //TODO: turns this into a method that can be curried
     sedisPool.withClient(client => {
       //TODO: use matching; for testing purposes, it's probably not needed
       val id = client.get(email+"__user_id")
@@ -234,22 +229,6 @@ with HasDatabaseConfig[JdbcProfile] {
         db.run(defaultSQL)
       }
     })
-
-    //check if there's a limit
-    /*limit match {
-      case Some(x) => {
-        val rawSQL = sql"""
-              SELECT e.id, e.name, e.start_date, count(a.user_id)
-              as number_of_attendees FROM events e
-              left outer join attends a
-              ON e.id = a.event_id WHERE e.start_date >= ${dateString} GROUP BY e.id;""".as[(Long, String, String, Int)]
-
-        db.run(dateQuery.drop(o).take(x)
-        .sortBy(_._1.start_date.asc).result).map(rows => rows)
-      }
-      case None => db.run(dateQuery.drop(o).sortBy(_._1.start_date.asc).result).map(
-        rows => rows)
-    }*/ 
   }
 }
 
