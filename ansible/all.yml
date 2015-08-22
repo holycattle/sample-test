@@ -1,5 +1,6 @@
-- hosts: servers
-  user: "{{ lookup('env','OS_USER_NAME') }}"
+  user: vagrant
+  vars:
+    user: "vagrant"
   sudo: yes
   roles:
     - system
@@ -17,7 +18,7 @@
     - python3
     - clang
     - gcc
-    - git
+#    - git
     - redis
     - mysql
 #    - postgresql
