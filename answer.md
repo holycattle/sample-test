@@ -10,7 +10,7 @@ keys are Int.
 3. The email field should be unique, although I do understand that the database schema was meant to
 provide a convenient testing environment. (related to #2)
 
-#### Stuff to improve in my code
+##### Stuff to improve in my code
 1. Reduce all the boilerplate -- especially in writing models -- by writing macros and maybe
 organizing stuff into inheritable and/or generic classes. Maybe even write DSPs?
 2. Setup Slick Evolutions for version tracking the database; setup Slick code generation for tables
