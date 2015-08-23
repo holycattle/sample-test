@@ -9,6 +9,8 @@ in the schema also aren't consistent -- some of the primary keys are Long while 
 keys are Int.
 3. The email field should be unique, although I do understand that the database schema was meant to
 provide a convenient testing environment. (related to #2)
+4. The specs for the REST endpoints can also be refactored to make more semantic sense and
+be more conformant to REST standards, e.g. `POST /api/events/reserve` can be `POST /api/events/:id/(reserve|unreserve)`, or `POST /api/companies/events` can be `GET /api/companies/:id/events` instead.
 
 ##### Stuff to improve in my code
 1. Reduce all the boilerplate -- especially in writing models -- by writing macros and maybe
